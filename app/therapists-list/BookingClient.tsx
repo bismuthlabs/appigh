@@ -1,0 +1,1116 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type {
+  Therapist,
+  MassageOffering,
+  TherapistAvailability,
+  ServiceLocation,
+  WalkInLocation,
+} from "./therapists";
+import Image from "next/image";
+import { readSavedBooking, saveBooking, type SavedBooking } from "../booking-data";
+import { formatGhs } from "../money";
+import {
+  getProviderAvailability,
+  getProviderTimeSlots,
+  readProviderSettings,
+  subscribeToProviderSettings,
+  type ProviderSettings,
+} from "@/lib/provider-settings";
+
+type Props = {
+  therapist?: Therapist;
+  repeatBookingId?: string;
+  rescheduleBookingId?: string;
+};
+
+const emptyOfferings: MassageOffering[] = [];
+const emptyAvailability: TherapistAvailability[] = [];
+const emptyServiceLocations: ServiceLocation[] = [];
+const emptyWalkInLocations: WalkInLocation[] = [];
+const CONTACT_NUMBER_STORAGE_KEY = "appi.contact-number.v1";
+
+function isValidPhoneNumber(value: string) {
+  const trimmedValue = value.trim();
+  if (!/^\+?[\d\s().-]+$/.test(trimmedValue)) return false;
+
+  const digitCount = trimmedValue.replace(/\D/g, "").length;
+  return digitCount >= 7 && digitCount <= 15;
+}
+
+function pad(n: number) {
+  return n.toString().padStart(2, "0");
+}
+
+function timeToMinutes(t: string) {
+  const [hh, mm] = t.split(":").map(Number);
+  return hh * 60 + mm;
+}
+
+function minutesToTime(mins: number) {
+  const hh = Math.floor(mins / 60);
+  const mm = mins % 60;
+  return `${pad(hh)}:${pad(mm)}`;
+}
+
+function formatBookingDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-GH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
+function formatBookingTime(time: string) {
+  const [hour, minute] = time.split(":").map(Number);
+  const suffix = hour < 12 ? "AM" : "PM";
+  return `${hour % 12 || 12}:${pad(minute)} ${suffix}`;
+}
+
+function generateTimeSlots(start: string, end: string, duration: number) {
+  const startMin = timeToMinutes(start);
+  const endMin = timeToMinutes(end);
+  const slots: string[] = [];
+  for (let t = startMin; t + duration <= endMin; t += 15) {
+    // 15 minute step for flexibility
+    slots.push(minutesToTime(t));
+  }
+  return slots;
+}
+
+export default function BookingClient({
+  therapist: therapistProp,
+  repeatBookingId,
+  rescheduleBookingId,
+}: Props) {
+  // When used from `/[slug]/book`, read slug client-side and resolve therapist.
+  const [therapist, setTherapist] = useState<Therapist | undefined>(
+    therapistProp,
+  );
+  const [isTherapistLoading, setIsTherapistLoading] = useState(
+    () => !therapistProp,
+  );
+  const [providerSettings, setProviderSettings] =
+    useState<ProviderSettings | null>(null);
+  const [providerSettingsError, setProviderSettingsError] = useState("");
+
+  useEffect(() => {
+    if (therapistProp) return;
+
+    let isCurrent = true;
+
+    async function resolveTherapist() {
+      const path =
+        typeof window !== "undefined" ? window.location.pathname : "";
+      const parts = path.split("/").filter(Boolean);
+      const slugIndex = parts.indexOf("therapists-list") + 1;
+      const slug = parts[slugIndex];
+
+      if (!slug) {
+        setTherapist(undefined);
+        setIsTherapistLoading(false);
+        return;
+      }
+
+      try {
+        const { therapists } = await import("./therapists");
+        if (!isCurrent) return;
+
+        setTherapist(therapists.find((item) => item.slug === slug));
+      } catch {
+        if (!isCurrent) return;
+
+        setTherapist(undefined);
+      } finally {
+        if (isCurrent) setIsTherapistLoading(false);
+      }
+    }
+
+    void resolveTherapist();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [therapistProp]);
+
+  const offerings = therapist?.massageOfferings ?? emptyOfferings;
+  const serviceLocations = therapist?.serviceLocations ?? emptyServiceLocations;
+  const walkInLocations = therapist?.walkInLocations ?? emptyWalkInLocations;
+
+  const [step, setStep] = useState(0);
+  const [selectedOffering, setSelectedOffering] =
+    useState<MassageOffering | null>(offerings[0] || null);
+  const [selectedLocation, setSelectedLocation] = useState<ServiceLocation | null>(null);
+  const [locationDetails, setLocationDetails] = useState("");
+  const [selectedWalkInLocationId, setSelectedWalkInLocationId] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [clientName, setClientName] = useState("");
+  const [clientNotes, setClientNotes] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneNumberTouched, setPhoneNumberTouched] = useState(false);
+  const [contactStorageError, setContactStorageError] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [repeatError, setRepeatError] = useState<string | null>(null);
+  const [modalOffering, setModalOffering] = useState<MassageOffering | null>(
+    null,
+  );
+
+  const availability = useMemo(() => {
+    if (providerSettings) return getProviderAvailability(providerSettings);
+    return therapist?.availability ?? emptyAvailability;
+  }, [providerSettings, therapist]);
+  const effectiveSelectedOffering = useMemo(() => {
+    if (!selectedOffering || !providerSettings) return selectedOffering;
+    return {
+      ...selectedOffering,
+      durationMinutes: providerSettings.sessionDurationMinutes,
+      price: providerSettings.sessionFee,
+    };
+  }, [providerSettings, selectedOffering]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try {
+        setPhoneNumber(
+          window.localStorage.getItem(CONTACT_NUMBER_STORAGE_KEY) ?? "",
+        );
+      } catch {
+        setContactStorageError(
+          "This browser could not access saved contact details. Check storage settings and try again.",
+        );
+      }
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    if (!therapist) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (!repeatBookingId) return;
+
+      const savedBooking = readSavedBooking(repeatBookingId);
+      if (!savedBooking || savedBooking.therapistSlug !== therapist.slug) {
+        setRepeatError("We couldn't load that booking. You can start a new booking instead.");
+        return;
+      }
+
+      const currentOffering = offerings.find(
+        (offering) => offering.massageType === savedBooking.treatment,
+      );
+      setSelectedOffering({
+        ...currentOffering,
+        massageType: savedBooking.treatment,
+        durationMinutes: savedBooking.durationMinutes,
+        price: savedBooking.price,
+      });
+      setSelectedLocation(savedBooking.serviceLocation);
+      setLocationDetails(savedBooking.locationDetails);
+      const walkInLocation = walkInLocations.find(
+        (location) =>
+          `${location.name} — ${location.address}` === savedBooking.locationDetails,
+      );
+      setSelectedWalkInLocationId(walkInLocation?.id ?? "");
+      setSelectedDate(savedBooking.date);
+      setSelectedTime(savedBooking.time);
+      setClientName(savedBooking.clientName ?? "");
+      setClientNotes(savedBooking.notes ?? "");
+      if (savedBooking.phoneNumber) setPhoneNumber(savedBooking.phoneNumber);
+      setStep(3);
+      setRepeatError(null);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [therapist, repeatBookingId, offerings, walkInLocations]);
+
+  useEffect(() => {
+    if (!therapist) return;
+    const therapistSlug = therapist.slug;
+
+    function syncProviderSettings() {
+      try {
+        setProviderSettings(readProviderSettings(therapistSlug) ?? null);
+        setProviderSettingsError("");
+      } catch {
+        setProviderSettings(null);
+        setProviderSettingsError(
+          "Provider availability settings couldn’t be read. The public page is showing its standard sample times.",
+        );
+      }
+    }
+
+    const frame = requestAnimationFrame(syncProviderSettings);
+    const unsubscribe = subscribeToProviderSettings(syncProviderSettings);
+    return () => {
+      cancelAnimationFrame(frame);
+      unsubscribe();
+    };
+  }, [therapist]);
+
+  const availableDates = useMemo(
+    () => availability.map((a) => a.date),
+    [availability],
+  );
+
+  const timeSlots = useMemo(() => {
+    if (!selectedDate || !effectiveSelectedOffering) return [];
+    if (providerSettings) {
+      return getProviderTimeSlots(selectedDate, providerSettings);
+    }
+    const day = availability.find((a) => a.date === selectedDate) as
+      | TherapistAvailability
+      | undefined;
+    if (!day) return [];
+    return generateTimeSlots(
+      day.startTime,
+      day.endTime,
+      effectiveSelectedOffering.durationMinutes,
+    );
+  }, [
+    selectedDate,
+    effectiveSelectedOffering,
+    providerSettings,
+    availability,
+  ]);
+
+  const nextAvailableDate = useMemo(() => {
+    if (!selectedDate || !effectiveSelectedOffering) return null;
+
+    return [...availability]
+      .filter((day) => day.date > selectedDate)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .find(
+        (day) =>
+          (providerSettings
+            ? getProviderTimeSlots(day.date, providerSettings)
+            : generateTimeSlots(
+                day.startTime,
+                day.endTime,
+                effectiveSelectedOffering.durationMinutes,
+              )
+          ).length > 0,
+      )?.date ?? null;
+  }, [availability, selectedDate, effectiveSelectedOffering, providerSettings]);
+
+  const selectedWalkInLocation = walkInLocations.find(
+    (location) => location.id === selectedWalkInLocationId,
+  );
+
+  const router = useRouter();
+
+  // Mapping of massage type to representative images
+  const massageTypeImages: Record<string, string> = {
+    Swedish:
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=80",
+    Aromatherapy:
+      "https://images.unsplash.com/photo-1556228720-88b58b1a3f64?auto=format&fit=crop&w=1000&q=80",
+    "Deep Tissue":
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=80",
+    Sports:
+      "https://images.unsplash.com/photo-1526403224745-1e8d7b7d4c3b?auto=format&fit=crop&w=1000&q=80",
+    "Hot Stone":
+      "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1000&q=80",
+    Couples:
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=1000&q=80",
+    "Trigger Point":
+      "https://images.unsplash.com/photo-1523882454942-d7c1730b0b11?auto=format&fit=crop&w=1000&q=80",
+    Restorative:
+      "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1000&q=80",
+    Relaxation:
+      "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1000&q=80",
+  };
+
+  function canProceedFromLocation() {
+    if (selectedLocation === "walk-in") return !!selectedWalkInLocation;
+    if (selectedLocation === "home" || selectedLocation === "hotel") {
+      return locationDetails.trim().length > 0;
+    }
+    return false;
+  }
+
+  function getLocationDetails() {
+    if (selectedLocation === "walk-in") {
+      return selectedWalkInLocation
+        ? `${selectedWalkInLocation.name} — ${selectedWalkInLocation.address}`
+        : locationDetails.trim();
+    }
+    return locationDetails.trim();
+  }
+
+  function canProceedToSummary() {
+    return (
+      !!effectiveSelectedOffering &&
+      canProceedFromLocation() &&
+      !!selectedDate &&
+      !!selectedTime
+    );
+  }
+
+  function handlePhoneNumberChange(value: string) {
+    setPhoneNumber(value);
+    setPhoneNumberTouched(false);
+    setBookingError(null);
+    try {
+      window.localStorage.setItem(CONTACT_NUMBER_STORAGE_KEY, value);
+      setContactStorageError(null);
+    } catch {
+      setContactStorageError(
+        "This browser could not save your contact number. Check storage settings and try again.",
+      );
+    }
+  }
+
+  async function handleConfirm() {
+    if (isSubmittingBooking) return;
+    if (
+      !therapist ||
+      !selectedOffering ||
+      !effectiveSelectedOffering ||
+      !selectedLocation ||
+      !selectedDate ||
+      !selectedTime ||
+      !canProceedFromLocation() ||
+      !clientName.trim() ||
+      !isValidPhoneNumber(phoneNumber)
+    ) {
+      if (!clientName.trim()) {
+        setBookingError("Enter your name so the therapist knows who is coming.");
+      }
+      setPhoneNumberTouched(true);
+      return;
+    }
+
+    setIsSubmittingBooking(true);
+    setBookingError(null);
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          therapistSlug: therapist.slug,
+          therapistName: therapist.firstName,
+          clientName: clientName.trim(),
+          phoneNumber: phoneNumber.trim(),
+          therapistNote: clientNotes.trim(),
+          treatment: selectedOffering.massageType,
+          durationMinutes: effectiveSelectedOffering.durationMinutes,
+          serviceLocation: selectedLocation,
+          address: getLocationDetails(),
+          date: selectedDate,
+          time: selectedTime,
+          timeZone: "Africa/Accra",
+          total: effectiveSelectedOffering.price,
+        }),
+      });
+      const result: unknown = await response.json();
+      if (
+        !response.ok ||
+        !result ||
+        typeof result !== "object" ||
+        !("bookingId" in result) ||
+        typeof result.bookingId !== "string" ||
+        !("confirmationToken" in result) ||
+        typeof result.confirmationToken !== "string"
+      ) {
+        const message =
+          result && typeof result === "object" && "error" in result &&
+          typeof result.error === "string"
+            ? result.error
+            : "Your booking couldn’t be saved. Please try again.";
+        throw new Error(message);
+      }
+
+      const booking: SavedBooking = {
+        id: result.bookingId,
+        therapistSlug: therapist.slug,
+        therapistName: therapist.firstName,
+        clientName: clientName.trim(),
+        notes: clientNotes.trim(),
+        treatment: selectedOffering.massageType,
+        durationMinutes: effectiveSelectedOffering.durationMinutes,
+        serviceLocation: selectedLocation,
+        locationDetails: getLocationDetails(),
+        date: selectedDate,
+        time: selectedTime,
+        price: effectiveSelectedOffering.price,
+        phoneNumber: phoneNumber.trim(),
+        timeZone: "Africa/Accra",
+        createdAt: new Date().toISOString(),
+        status: "confirmed",
+        demo: true,
+      };
+
+      try {
+        window.sessionStorage.setItem(
+          `appi.booking-confirmation-token.${booking.id}`,
+          result.confirmationToken,
+        );
+      } catch {
+        throw new Error(
+          "Your booking was saved, but secure confirmation could not be opened because browser session storage is unavailable.",
+        );
+      }
+
+      saveBooking(booking, rescheduleBookingId);
+      router.push(
+        `/booking-confirmation?${new URLSearchParams({ bookingId: booking.id })}`,
+      );
+    } catch (error) {
+      setBookingError(
+        error instanceof Error
+          ? error.message
+          : "Your booking couldn’t be saved. Please try again.",
+      );
+      setIsSubmittingBooking(false);
+    }
+  }
+
+  if (!therapist) {
+    if (!isTherapistLoading) {
+      return (
+        <section className="app-surface rounded-md p-8 text-center shadow-sm sm:p-10">
+          <h2 className="text-xl font-semibold text-app-ink">
+            Therapist unavailable
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-app-ink-muted">
+            This therapist profile could not be found or loaded. Browse the
+            available therapists to choose another one.
+          </p>
+          <Link href="/therapists-list" className="app-button app-button-primary mt-5">
+            Browse therapists
+          </Link>
+        </section>
+      );
+    }
+
+    return (
+      <div className="app-surface rounded-md p-8 text-center shadow-sm">
+        <p className="text-sm text-app-ink-muted">Loading therapist details…</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="app-surface overflow-hidden rounded-md shadow-sm">
+        <div className="flex flex-col gap-5 border-b border-app-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="relative size-16 shrink-0 overflow-hidden rounded-xl sm:size-18">
+              <Image
+                src={therapist.image}
+                alt={therapist.firstName}
+                fill
+                sizes="(max-width: 640px) 4rem, 5rem"
+                className="object-cover"
+              />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight sm:text-xl">
+                Book {therapist.firstName}
+              </h3>
+              <div className="flex items-center gap-1.5">
+                <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="size-4 text-app-ink-muted"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  >
+                    <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+                    <circle cx="12" cy="10" r="2.5" />
+                </svg>
+                <p className="text-sm text-app-ink-muted">{therapist.location}</p>
+              </div>
+            </div>
+          </div>
+          {/* <div className="flex items-center gap-2 self-start rounded-full bg-app-surface-muted px-3 py-1.5 text-sm text-app-ink sm:self-center">
+            <span aria-hidden="true" className="text-app-accent">★</span>
+            <span className="font-semibold">{therapist.rating}</span>
+            <span className="text-app-ink-muted">({therapist.reviewCount} reviews)</span>
+          </div> */}
+        </div>
+
+        <div className="px-4 pt-5 sm:px-6 sm:pt-6">
+          <ol aria-label="Booking progress" className="grid grid-cols-4">
+            {["Treatment", "Location", "Time", "Review"].map((label, index) => (
+              <li key={label} className="relative flex flex-col items-center text-center">
+                {index < 3 && (
+                  <span
+                    aria-hidden="true"
+                    className="booking-step-connector absolute left-1/2 top-4 h-px w-full bg-app-border"
+                  >
+                    <span
+                      className={`booking-step-connector-fill block h-full origin-left bg-app-primary ${
+                        step > index ? "is-complete" : ""
+                      }`}
+                    />
+                  </span>
+                )}
+                <span
+                  aria-current={step === index ? "step" : undefined}
+                  className={`booking-step-marker relative z-10 flex size-8 items-center justify-center rounded-full border text-xs font-semibold ${
+                    step === index
+                      ? "booking-step-marker-active border-app-primary bg-app-primary text-white"
+                      : step > index
+                        ? "booking-step-marker-complete border-app-primary bg-app-primary text-white"
+                        : "border-app-border bg-app-surface text-app-ink-muted"
+                  }`}
+                >
+                  {step > index ? (
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="3"
+                      className="booking-step-check size-4"
+                    >
+                      <path d="m5 12 4 4L19 6" />
+                    </svg>
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                <span
+                  className={`booking-step-label mt-2 text-[11px] sm:text-xs ${
+                    step === index
+                      ? "booking-step-label-active font-semibold text-app-ink"
+                      : "text-app-ink-muted"
+                  }`}
+                >
+                  {label}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {providerSettingsError ? (
+          <p role="alert" className="mx-4 mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 sm:mx-6">
+            {providerSettingsError}
+          </p>
+        ) : null}
+        {providerSettings?.meetingModes.length ? (
+          <p className="mx-4 mt-4 text-sm text-app-ink-muted sm:mx-6">
+            Session modes:{" "}
+            {providerSettings.meetingModes
+              .map((mode) =>
+                mode === "video"
+                  ? "Video call"
+                  : mode === "phone"
+                    ? "Phone / WhatsApp"
+                    : "In person",
+              )
+              .join(" · ")}
+          </p>
+        ) : null}
+
+        {repeatError ? (
+          <p role="alert" className="mx-4 mt-4 rounded-md border border-app-border bg-app-surface-muted p-3 text-sm text-app-ink sm:mx-6">
+            {repeatError}
+          </p>
+        ) : null}
+
+        <div className="space-y-6 p-4 sm:p-6">
+          {step === 0 && (
+            <div>
+              <h4 className="mb-2 text-sm font-medium">
+                Kindly choose a massage type
+              </h4>
+              <div className="flex flex-col gap-2">
+                {offerings.length === 0 && (
+                  <p className="text-sm text-app-ink-muted">
+                    No offerings available.
+                  </p>
+                )}
+                {offerings.map((o) => {
+                  return (
+                    <div
+                      key={o.massageType}
+                      className={`flex items-center gap-3 rounded-md border p-3 transition-colors ${selectedOffering?.massageType === o.massageType ? "border-app-primary bg-app-surface-muted" : "border-app-border bg-app-surface hover:border-app-primary"}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedOffering(o);
+                          setStep(1);
+                          setSelectedTime(null);
+                        }}
+                        aria-pressed={selectedOffering?.massageType === o.massageType}
+                        className="flex min-w-0 flex-1 items-center gap-3 border-0 bg-transparent p-0 text-left text-app-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-focus"
+                      >
+                        {/* <span className="relative h-16 w-20 shrink-0 overflow-hidden rounded-md sm:h-18 sm:w-24">
+                          <Image
+                            src={img}
+                            alt={o.massageType}
+                            fill
+                            sizes="6rem"
+                            className="object-cover"
+                          />
+                        </span> */}
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-medium">{o.massageType}</span>
+                          <span className="mt-1 block text-xs text-app-ink-muted">
+                            {providerSettings?.sessionDurationMinutes ?? o.durationMinutes} mins •{" "}
+                            {formatGhs(providerSettings?.sessionFee ?? o.price)}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModalOffering(o)}
+                        className="app-button app-button-secondary min-h-9 shrink-0 px-3 py-2 text-xs"
+                      >
+                        Learn more
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div>
+              <h4 className="mb-2 text-sm font-medium">
+                Where would you like to have your session? Choose & enter a location
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {serviceLocations.length === 0 && (
+                  <p className="text-sm text-app-ink-muted">
+                    No service locations available.
+                  </p>
+                )}
+                {serviceLocations.map((loc) => (
+                  <button
+                    key={loc}
+                    onClick={() => {
+                      if (selectedLocation !== loc) {
+                        setLocationDetails("");
+                        setSelectedWalkInLocationId("");
+                      }
+                      setSelectedLocation(loc);
+                      setBookingError(null);
+                    }}
+                    aria-pressed={selectedLocation === loc}
+                    className={`app-button min-h-14 w-full justify-between px-4 py-3 text-left text-sm capitalize transition-colors ${selectedLocation === loc ? "border-app-primary bg-app-surface-muted text-app-ink" : "border-app-border bg-app-surface text-app-ink hover:border-app-primary"}`}
+                  >
+                    {loc}
+                    <span aria-hidden="true" className="text-lg">{selectedLocation === loc ? "✓" : "→"}</span>
+                  </button>
+                ))}
+              </div>
+
+              {(selectedLocation === "home" || selectedLocation === "hotel") && (
+                <div className="mt-5 rounded-md border border-app-border bg-app-surface-muted p-4">
+                  <label htmlFor="service-location-details" className="mb-2 block text-sm font-semibold text-app-ink">
+                    {selectedLocation === "home" ? "The therapist will come to you." : "The therapist will come to you."}
+                  </label>
+                  <textarea
+                    id="service-location-details"
+                    rows={3}
+                    maxLength={300}
+                    required
+                    value={locationDetails}
+                    onChange={(event) => {
+                      setLocationDetails(event.target.value);
+                      setBookingError(null);
+                    }}
+                    placeholder={selectedLocation === "home"
+                      ? "Enter area, or street name, and a nearby landmark"
+                      : "Enter the hotel name, and room number"}
+                    className="app-textarea"
+                  />
+                  {/* <p className="mt-2 text-xs leading-5 text-app-ink-muted">
+                    This address is saved with this booking on this device only.
+                  </p> */}
+                </div>
+              )}
+
+              {selectedLocation === "walk-in" && (
+                <div className="mt-5 space-y-3">
+                  <div>
+                    <h5 className="text-sm font-semibold text-app-ink">Choose a walk-in location</h5>
+                    <p className="mt-1 text-xs leading-5 text-app-ink-muted">
+                      Sample venues are shown for this demo. Confirm the venue with the therapist before travelling.
+                    </p>
+                  </div>
+                  {walkInLocations.length > 0 ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {walkInLocations.map((location) => (
+                        <button
+                          key={location.id}
+                          type="button"
+                          aria-pressed={selectedWalkInLocationId === location.id}
+                          onClick={() => {
+                            setSelectedWalkInLocationId(location.id);
+                            setBookingError(null);
+                          }}
+                          className={`flex min-h-16 items-start justify-between gap-3 rounded-md border p-3 text-left transition-colors ${selectedWalkInLocationId === location.id ? "border-app-primary bg-app-surface-muted" : "border-app-border bg-app-surface hover:border-app-primary"}`}
+                        >
+                          <span>
+                            <span className="block text-sm font-medium text-app-ink">{location.name}</span>
+                            <span className="mt-1 block text-xs leading-5 text-app-ink-muted">{location.address}</span>
+                          </span>
+                          <span aria-hidden="true" className="text-app-primary">{selectedWalkInLocationId === location.id ? "✓" : "○"}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-md border border-app-border p-3 text-sm text-app-ink-muted">
+                      This therapist has not added a walk-in venue yet. Choose home or hotel instead.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div>
+              <h4 className="mb-2 text-sm font-medium">What date & time do you want your session?</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <label htmlFor="booking-date" className="mb-2 block text-sm font-medium text-app-ink">Date</label>
+                  <div className="app-select-wrap">
+                    <select
+                      id="booking-date"
+                      value={selectedDate || ""}
+                      onChange={(e) => {
+                        setSelectedDate(e.target.value);
+                        setSelectedTime(null);
+                      }}
+                      className="app-control app-control-select text-sm focus:outline-none focus:ring-2 focus:ring-app-focus"
+                    >
+                      <option value="">Choose a date</option>
+                      {selectedDate && !availableDates.includes(selectedDate) ? (
+                        <option value={selectedDate}>
+                          {formatBookingDate(selectedDate)} (previous booking)
+                        </option>
+                      ) : null}
+                      {availableDates.map((date) => (
+                        <option key={date} value={date}>
+                          {formatBookingDate(date)}
+                        </option>
+                      ))}
+                    </select>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="app-select-chevron"><path d="m6 9 6 6 6-6" /></svg>
+                  </div>
+                </div>
+
+                <div className="min-w-0">
+                  <label htmlFor="booking-time" className="mb-2 block text-sm font-medium text-app-ink">Start time</label>
+                  <div className="app-select-wrap">
+                    <select
+                      id="booking-time"
+                      value={selectedTime || ""}
+                      onChange={(e) => setSelectedTime(e.target.value)}
+                      disabled={!selectedDate || timeSlots.length === 0}
+                      className="app-control app-control-select text-sm focus:outline-none focus:ring-2 focus:ring-app-focus disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      <option value="">Choose a time</option>
+                      {selectedTime && !timeSlots.includes(selectedTime) ? (
+                        <option value={selectedTime}>
+                          {formatBookingTime(selectedTime)} (previous booking)
+                        </option>
+                      ) : null}
+                      {timeSlots.map((time) => (
+                        <option key={time} value={time}>
+                          {formatBookingTime(time)}
+                        </option>
+                      ))}
+                    </select>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="app-select-chevron"><path d="m6 9 6 6 6-6" /></svg>
+                  </div>
+                </div>
+              </div>
+              {selectedDate && timeSlots.length === 0 && (
+                <div className="mt-3">
+                  <p className="text-sm text-app-ink-muted">
+                    No start times are available for this date and treatment.
+                  </p>
+                  {nextAvailableDate ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(nextAvailableDate);
+                        setSelectedTime(null);
+                      }}
+                      className="app-button app-button-secondary mt-3"
+                    >
+                      Jump to next available date ({formatBookingDate(nextAvailableDate)})
+                    </button>
+                  ) : (
+                    <p className="mt-2 text-sm text-app-ink-muted">
+                      No later dates with available start times are currently listed.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step > 0 && step < 3 && (
+            <div className="flex flex-col-reverse gap-3 border-t border-app-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                onClick={() => setStep((s) => Math.max(0, s - 1))}
+                className="app-button app-button-secondary"
+              >
+                Back
+              </button>
+              {step < 3 && (
+                <button
+                  disabled={(step === 1 && !canProceedFromLocation()) || (step === 2 && (!selectedDate || !selectedTime))}
+                  onClick={() => setStep((s) => Math.min(3, s + 1))}
+                  className="app-button app-button-primary"
+                >
+                  Continue
+                </button>
+              )}
+            </div>
+          )}
+
+          {step >= 3 && (
+            <div>
+              <section
+                aria-labelledby="booking-contact-heading"
+                className="mb-5 rounded-md border border-app-border bg-app-surface-muted p-4"
+              >
+                <h4 id="booking-contact-heading" className="text-sm font-medium text-app-ink">
+                  The therapist will contact you.
+                </h4>
+                <label
+                  htmlFor="booking-client-name"
+                  className="mb-2 mt-3 block text-sm font-medium text-app-ink"
+                >
+                  Your name
+                </label>
+                <input
+                  id="booking-client-name"
+                  type="text"
+                  autoComplete="name"
+                  maxLength={100}
+                  required
+                  value={clientName}
+                  onChange={(event) => {
+                    setClientName(event.target.value);
+                    setBookingError(null);
+                  }}
+                  placeholder="Enter your name"
+                  className="app-control w-full px-3 text-base"
+                />
+                <label
+                  htmlFor="booking-phone-number"
+                  className="mb-2 mt-4 block text-sm font-medium text-app-ink"
+                >
+                  Phone or WhatsApp number
+                </label>
+                <input
+                  id="booking-phone-number"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={30}
+                  value={phoneNumber}
+                  onChange={(event) =>
+                    handlePhoneNumberChange(event.target.value)
+                  }
+                  onBlur={() => setPhoneNumberTouched(true)}
+                  aria-invalid={
+                    phoneNumberTouched &&
+                    phoneNumber.length > 0 &&
+                    !isValidPhoneNumber(phoneNumber)
+                  }
+                  aria-describedby="booking-phone-help booking-phone-error"
+                  placeholder="Enter your phone or WhatsApp "
+                  className="app-control w-full px-3 text-base"
+                />
+                {/* <p id="booking-phone-help" className="mt-1 text-xs text-app-ink-muted">
+                  We’ll use this number to contact you about the session.
+                </p> */}
+                {phoneNumberTouched && !isValidPhoneNumber(phoneNumber) ? (
+                  <p
+                    id="booking-phone-error"
+                    role="alert"
+                    className="mt-2 text-sm text-red-700 dark:text-red-300"
+                  >
+                    {phoneNumber.trim()
+                      ? "Enter a valid phone number with 7 to 15 digits."
+                      : "Enter a phone or WhatsApp number to continue."}
+                  </p>
+                ) : (
+                  <span id="booking-phone-error" />
+                )}
+                {contactStorageError ? (
+                  <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-300">
+                    {contactStorageError}
+                  </p>
+                ) : null}
+                <label
+                  htmlFor="booking-client-notes"
+                  className="mb-2 mt-4 block text-sm font-medium text-app-ink"
+                >
+                  Notes for the therapist <span className="font-normal text-app-ink-muted">· optional</span>
+                </label>
+                <textarea
+                  id="booking-client-notes"
+                  rows={3}
+                  maxLength={1000}
+                  value={clientNotes}
+                  onChange={(event) => setClientNotes(event.target.value)}
+                  placeholder="Anything you’d like the therapist to know before your session?"
+                  className="app-textarea"
+                />
+              </section>
+
+              <h4 className="mb-2 text-sm font-medium">Summary</h4>
+              <div className="divide-y divide-app-border rounded-md border border-app-border bg-app-surface px-4">
+                <p className="py-3 text-sm">
+                  <span className="font-medium">Client</span><br />
+                  {clientName.trim() || "Enter your name"}
+                </p>
+                <p className="py-3 text-sm">
+                  <span className="font-medium">Treatment</span><br />
+                  {selectedOffering?.massageType}
+                </p>
+                <p className="py-3 text-sm">
+                  <span className="font-medium">Location</span><br />
+                  <span className="capitalize">{selectedLocation}</span>
+                  <span className="block text-app-ink-muted">{getLocationDetails()}</span>
+                </p>
+                <p className="py-3 text-sm">
+                  <span className="font-medium">Date and time</span><br />
+                  {selectedDate} at{" "}
+                  {selectedTime} · Africa/Accra
+                </p>
+                {clientNotes.trim() ? (
+                  <p className="py-3 text-sm">
+                    <span className="font-medium">Notes</span><br />
+                    <span className="whitespace-pre-wrap">{clientNotes.trim()}</span>
+                  </p>
+                ) : null}
+                <p className="flex items-center justify-between py-3 text-sm">
+                  <span className="font-medium">Total</span>
+                  <span className="text-base font-semibold">{formatGhs(effectiveSelectedOffering?.price ?? 0)}</span>
+                </p>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <button
+                  disabled={isSubmittingBooking || !canProceedToSummary() || !clientName.trim() || !isValidPhoneNumber(phoneNumber)}
+                  onClick={handleConfirm}
+                  className={`app-button flex-1 ${canProceedToSummary() && clientName.trim() && isValidPhoneNumber(phoneNumber) ? "app-button-primary" : "app-button-secondary"}`}
+                >
+                  {isSubmittingBooking ? "Saving booking…" : "Confirm Booking"}
+                </button>
+                <button
+                  onClick={() => setStep(2)}
+                  className="app-button app-button-secondary"
+                >
+                  Change time
+                </button>
+              </div>
+              {bookingError && (
+                <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{bookingError}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {modalOffering ? (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/55 p-3 sm:items-center">
+          <div className="app-surface w-full max-w-lg rounded-md p-4 shadow-2xl">
+            <div className="mb-3 flex items-start justify-between">
+              <div>
+                <h4 className="mt-1 text-2xl font-semibold text-app-ink">
+                  {modalOffering.massageType}
+                </h4>
+                <p className="mt-1 text-sm text-app-ink-muted">
+                  {providerSettings?.sessionDurationMinutes ?? modalOffering.durationMinutes} mins •{" "}
+                  {formatGhs(providerSettings?.sessionFee ?? modalOffering.price)}
+                </p>
+              </div>
+              <button
+                onClick={() => setModalOffering(null)}
+                className="app-icon-button"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="relative h-44 overflow-hidden rounded-md">
+                <Image
+                  src={
+                    massageTypeImages[modalOffering.massageType] ||
+                    therapist.image
+                  }
+                  alt={modalOffering.massageType}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 text-sm text-app-ink">
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-[0.2em] text-app-ink-muted">
+                  About this massage
+                </p>
+                <p>
+                  Specialized {modalOffering.massageType} session with{" "}
+                  {therapist.firstName}. Duration:{" "}
+                  {modalOffering.durationMinutes} minutes. Price: {formatGhs(modalOffering.price)}.
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-[0.2em] text-app-ink-muted">
+                  Next available
+                </p>
+                {availability[0] ? (
+                  <p>{formatBookingDate(availability[0].date)} • {formatBookingTime(availability[0].startTime)}–{formatBookingTime(availability[0].endTime)}</p>
+                ) : (
+                  <p>No availability published yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-3 border-t border-app-border pt-4 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                onClick={() => setModalOffering(null)}
+                className="app-button app-button-secondary"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedOffering(modalOffering);
+                  setModalOffering(null);
+                  setStep(1);
+                }}
+                className="app-button app-button-primary"
+              >
+                Book for {modalOffering.massageType}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}

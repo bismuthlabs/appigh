@@ -1,0 +1,609 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: light;
+  --app-canvas: #f7f5ef;
+  --app-surface: #ffffff;
+  --app-surface-muted: #eeeaf8;
+  --app-ink: #21154f;
+  --app-ink-muted: #716d7b;
+  --app-brand: #21154f;
+  --app-primary: #30235e;
+  --app-primary-hover: #21154f;
+  --app-accent: #f5a20b;
+  --app-accent-hover: #ffb82e;
+  --app-accent-ink: #21154f;
+  --app-border: #e2deea;
+  --app-success: #2f6848;
+  --app-focus: #6949c8;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-app-canvas: var(--app-canvas);
+  --color-app-surface: var(--app-surface);
+  --color-app-surface-muted: var(--app-surface-muted);
+  --color-app-ink: var(--app-ink);
+  --color-app-ink-muted: var(--app-ink-muted);
+  --color-app-brand: var(--app-brand);
+  --color-app-primary: var(--app-primary);
+  --color-app-primary-hover: var(--app-primary-hover);
+  --color-app-accent: var(--app-accent);
+  --color-app-accent-hover: var(--app-accent-hover);
+  --color-app-accent-ink: var(--app-accent-ink);
+  --color-app-border: var(--app-border);
+  --color-app-success: var(--app-success);
+  --color-app-focus: var(--app-focus);
+  --color-zinc-50: #faf9fc;
+  --color-zinc-100: #f1eff6;
+  --color-zinc-200: #e2deea;
+  --color-zinc-300: #d1cadb;
+  --color-zinc-400: #b6afc3;
+  --color-zinc-500: #817b8d;
+  --color-zinc-600: #696374;
+  --color-zinc-700: #514b5d;
+  --color-zinc-800: #383244;
+  --color-zinc-900: #251f32;
+  --color-zinc-950: #15131d;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --app-canvas: #15131d;
+    --app-surface: #1d1a28;
+    --app-surface-muted: #29243a;
+    --app-ink: #f5f1ff;
+    --app-ink-muted: #b6afc3;
+    --app-primary: #c9b9ff;
+    --app-primary-hover: #dfd5ff;
+    --app-accent: #ffbd3e;
+    --app-accent-hover: #ffd078;
+    --app-accent-ink: #21154f;
+    --app-border: #3a3547;
+    --app-success: #8bc8a0;
+    --app-focus: #c9b9ff;
+  }
+}
+
+body {
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+.app-page {
+  min-height: 80vh;
+  background: var(--app-canvas);
+  color: var(--app-ink);
+}
+
+.app-surface {
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-ink);
+}
+
+.app-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  padding: 0.625rem 1rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.app-button:focus-visible,
+.app-icon-button:focus-visible,
+.app-link:focus-visible,
+.therapist-profile-card:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 3px;
+}
+
+.app-button-primary {
+  background: var(--app-accent);
+  color: var(--app-accent-ink);
+}
+
+.app-button-primary:hover {
+  background: var(--app-accent-hover);
+  transform: translateY(-1px);
+}
+
+.app-button-brand {
+  background: var(--app-primary);
+  color: var(--app-surface);
+}
+
+.app-button-brand:hover {
+  background: var(--app-primary-hover);
+  transform: translateY(-1px);
+}
+
+.app-button-secondary {
+  border-color: var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-primary);
+}
+
+.app-button-secondary:hover {
+  border-color: var(--app-primary);
+  background: var(--app-surface-muted);
+}
+
+.app-button-quiet {
+  background: transparent;
+  color: var(--app-primary);
+}
+
+.app-button-quiet:hover {
+  background: var(--app-surface-muted);
+}
+
+.app-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.app-icon-button {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  border-radius: 9999px;
+  background: var(--app-surface);
+  color: var(--app-primary);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.app-icon-button:hover {
+  border-color: var(--app-primary);
+  background: var(--app-surface-muted);
+}
+
+.app-icon-button-overlay {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 9999px;
+  background: rgb(33 21 79 / 40%);
+  color: white;
+  backdrop-filter: blur(8px);
+  transition: background-color 160ms ease;
+}
+
+.app-icon-button-overlay:hover {
+  background: rgb(33 21 79 / 70%);
+}
+
+.app-icon-button svg,
+.app-icon-button-overlay svg,
+.app-button svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.app-link {
+  color: var(--app-primary);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.2em;
+  transition:
+    color 160ms ease,
+    text-decoration-color 160ms ease;
+}
+
+.app-link:hover {
+  color: var(--app-primary-hover);
+  text-decoration-color: currentColor;
+}
+
+.app-control {
+  min-height: 2.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background: var(--app-surface);
+  color: var(--app-ink);
+}
+
+.app-control-select {
+  width: 100%;
+  appearance: none;
+  padding: 0 2.75rem 0 0.875rem;
+  cursor: pointer;
+}
+
+.app-control option {
+  background: var(--app-surface);
+  color: var(--app-ink);
+}
+
+.app-select-wrap {
+  position: relative;
+}
+
+.app-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 0.875rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--app-ink-muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.app-control:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.app-textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.875rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background: var(--app-surface);
+  color: var(--app-ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.app-textarea::placeholder {
+  color: var(--app-ink-muted);
+  opacity: 0.75;
+}
+
+.app-textarea:focus-visible {
+  border-color: var(--app-focus);
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.therapist-details-dialog {
+  max-height: min(90vh, 48rem);
+  max-height: min(90dvh, 48rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.therapist-profile-card-perspective {
+  perspective: 1000px;
+}
+
+.therapist-profile-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 14rem;
+  cursor: pointer;
+  text-align: left;
+  transform-style: preserve-3d;
+  transition: transform 600ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.therapist-profile-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.therapist-profile-card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  /* align-items: center; */
+  height: fit-content;
+  gap: 2rem;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.therapist-profile-card-front {
+  background: var(--app-surface);
+}
+
+.therapist-profile-card-back {
+  justify-content: center;
+  color: white;
+  background: linear-gradient(135deg, #21154f 0%, #4f378b 52%, #137a8a 100%);
+  transform: rotateY(180deg);
+}
+
+.booking-step-marker {
+  transition:
+    background-color 240ms ease,
+    border-color 240ms ease,
+    color 240ms ease,
+    box-shadow 320ms ease,
+    transform 320ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.booking-step-marker-active {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-primary) 14%, transparent);
+}
+
+.booking-step-marker-complete {
+  animation: booking-step-complete 320ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.booking-step-connector-fill {
+  transform: scaleX(0);
+  transition: transform 420ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.booking-step-connector-fill.is-complete {
+  transform: scaleX(1);
+}
+
+.booking-step-label {
+  transition:
+    color 240ms ease,
+    font-weight 240ms ease;
+}
+
+.booking-step-check {
+  animation: booking-step-check 260ms ease-out both;
+}
+
+@keyframes booking-step-complete {
+  from {
+    transform: scale(0.82);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes booking-step-check {
+  from {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes confirmation-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes confirmation-mark-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.45) rotate(-12deg);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--app-success) 28%, transparent);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.12) rotate(3deg);
+    box-shadow: 0 0 0 0.75rem color-mix(in srgb, var(--app-success) 12%, transparent);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+    box-shadow: 0 0 0 0.25rem transparent;
+  }
+}
+
+@keyframes confirmation-check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.confirmation-panel {
+  animation: confirmation-panel-enter 520ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.confirmation-mark {
+  animation: confirmation-mark-enter 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.confirmation-check {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: confirmation-check-draw 360ms ease-out 300ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .therapist-profile-card {
+    transition: none;
+  }
+
+  .booking-step-marker,
+  .booking-step-connector-fill,
+  .booking-step-label {
+    animation: none;
+    transition: none;
+  }
+
+  .booking-step-marker-active {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .booking-step-check {
+    animation: none;
+  }
+
+  .confirmation-panel,
+  .confirmation-mark,
+  .confirmation-check {
+    animation: none;
+  }
+
+  .confirmation-check {
+    stroke-dashoffset: 0;
+  }
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
