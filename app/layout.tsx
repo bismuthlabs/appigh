@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import SiteFooter from "./SiteFooter";
 import BottomNav from "./BottomNav";
@@ -28,12 +29,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
+      <head>
+        <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KDHG5LH4" />
+        <script>
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());`}
+        </script>
+      </head>
       <body className="flex min-h-full flex-col">
         <div className="flex flex-1 flex-col pb-[calc(6rem+env(safe-area-inset-bottom))]">
           {children}
           <SiteFooter />
         </div>
         <BottomNav />
+        <Analytics />
       </body>
     </html>
   );
