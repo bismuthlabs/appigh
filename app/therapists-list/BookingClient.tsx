@@ -308,7 +308,7 @@ export default function BookingClient({
   // Mapping of massage type to representative images
   const massageTypeImages: Record<string, string> = {
     Swedish:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=80",
+      "/massage.jpeg",
     Aromatherapy:
       "https://images.unsplash.com/photo-1556228720-88b58b1a3f64?auto=format&fit=crop&w=1000&q=80",
     "Deep Tissue":
@@ -325,6 +325,43 @@ export default function BookingClient({
       "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1000&q=80",
     Relaxation:
       "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1000&q=80",
+    Nuru:
+      "/nuru-1.jpg",
+    Erotic:
+      "/nuru-1.jpg",
+    Sensual:
+      "/sensual-1.jpg",
+    "Combo (Nuru + Swed)":
+      "/black-man-massage.png",
+  };
+
+  const massageTypeDescriptions: Record<string, string> = {
+    Swedish:
+      "A flowing, full-body massage using long, gentle strokes to ease everyday tension and encourage deep relaxation.",
+    Aromatherapy:
+      "A calming massage paired with aromatic oils, chosen to create a soothing atmosphere and help you unwind.",
+    "Deep Tissue":
+      "Focused, firmer pressure works into deeper layers of muscle to address persistent tightness. Tell your therapist what pressure feels comfortable.",
+    Sports:
+      "A targeted massage for active bodies, focusing on muscle groups that feel tired or tight after training or activity.",
+    "Hot Stone":
+      "Warm stones are incorporated into a relaxing massage to bring soothing heat to tense areas.",
+    Couples:
+      "A shared massage experience for two, with each person receiving a session at the same time.",
+    "Trigger Point":
+      "Focused pressure is applied to specific areas of muscle tightness, with pressure adjusted to your comfort.",
+    Restorative:
+      "A gentle, unhurried session designed to help you rest, release tension, and feel restored.",
+    Relaxation:
+      "A gentle full-body massage with a steady rhythm to help quiet the mind and relax tired muscles.",
+    Nuru:
+      "A smooth, full-body massage using a water-based gel and flowing movements. It is done n*ked. Discuss boundaries and comfort with your therapist before the session.",
+    Erotic:
+      "A body-to-body relaxation-focused massage done with a bikini. Agree on boundaries with your therapist before the session; all touch must be consensual.",
+    Sensual:
+      "A slow, soothing body-to-body massage focused on comfort and relaxation. It is done n*ked. You and your therapist can agree on preferences and boundaries before beginning.",
+    "Combo (Nuru + Swed)":
+      "A combined session bringing together flowing Swedish strokes and the smooth, full-body-to-body movements of Nuru massage. Discuss preferences and boundaries beforehand.",
   };
 
   function canProceedFromLocation() {
@@ -1072,13 +1109,12 @@ export default function BookingClient({
                   About this massage
                 </p>
                 <p>
-                  Specialized {modalOffering.massageType} session with{" "}
-                  {therapist.firstName}. Duration:{" "}
-                  {modalOffering.durationMinutes} minutes. Price: {formatGhs(modalOffering.price)}.
+                  {massageTypeDescriptions[modalOffering.massageType] ??
+                    `A ${modalOffering.massageType} session tailored to your comfort and preferences. Speak with ${therapist.firstName} about pressure and boundaries before the session.`}
                 </p>
               </div>
 
-              <div>
+              {/* <div>
                 <p className="mb-1 text-xs uppercase tracking-[0.2em] text-app-ink-muted">
                   Next available
                 </p>
@@ -1087,7 +1123,7 @@ export default function BookingClient({
                 ) : (
                   <p>No availability published yet.</p>
                 )}
-              </div>
+              </div> */}
             </div>
 
             <div className="mt-5 flex flex-col-reverse gap-3 border-t border-app-border pt-4 sm:flex-row sm:items-center sm:justify-end">
