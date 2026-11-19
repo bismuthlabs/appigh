@@ -6,6 +6,16 @@ import { AlertCircle, Check } from "lucide-react";
 import { isSavedBooking, type SavedBooking } from "../booking-data";
 import { formatGhs } from "../money";
 
+declare global {
+  interface Window {
+    gtag?: (
+      command: string,
+      eventName: string,
+      parameters: { send_to: string },
+    ) => void;
+  }
+}
+
 function formatDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("en-GH", {
@@ -90,6 +100,20 @@ export default function BookingConfirmationClient({ bookingId }: { bookingId?: s
             !isSavedBooking(result.booking)
           ) {
             throw new Error("The booking details returned by the server are invalid.");
+          }
+
+          const conversionKey = `appi.google-ads-conversion.${result.booking.id}`;
+          try {
+            if (!window.sessionStorage.getItem(conversionKey)) {
+              window.gtag?.("event", "conversion", {
+                send_to: "AW-18564324117/YGTlCIiym7sdEJW2lJRF",
+              });
+              window.sessionStorage.setItem(conversionKey, "sent");
+            }
+          } catch {
+            window.gtag?.("event", "conversion", {
+              send_to: "AW-18564324117/YGTlCIiym7sdEJW2lJRF",
+            });
           }
 
           setBooking(result.booking);
