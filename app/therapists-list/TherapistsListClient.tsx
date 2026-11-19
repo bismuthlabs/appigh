@@ -428,14 +428,14 @@ function TherapistCard({
         className="group flex flex-[0_0_92%] flex-col snap-center overflow-hidden sm:min-w-68.75 sm:max-w-73.75 sm:flex-1"
       >
         <div className="relative block h-[68vh] w-full overflow-hidden rounded-xl border border-app-border bg-app-surface-muted shadow-sm transition-all duration-200 hover:shadow-md">
-          <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-1 p-2">
+          {/* <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-1 p-2">
             {imageList.map((_, index) => (
               <span
                 key={`${therapist.slug}-indicator-${index}`}
                 className={`h-0.5 flex-1 rounded-full transition-all ${index === currentImageIndex ? "bg-white" : "bg-white/35"}`}
               />
             ))}
-          </div>
+          </div> */}
           {therapist.isDemo ? (
             <span className="absolute right-2 top-7 z-20 rounded-full border border-white/30 bg-black/65 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white shadow-sm">
               Sample profile
@@ -489,7 +489,7 @@ function TherapistCard({
             </div>
           </button>
 
-          <div className="absolute bottom-3 right-2 z-30">
+          <div className="absolute top-3 right-3 z-30">
             <Link
               href={`/therapists-list/${therapist.slug}/book`}
               className="app-button app-button-primary min-h-9 gap-2 rounded-md px-3.5 py-2 text-xs shadow-md"
@@ -510,6 +510,20 @@ function TherapistCard({
               Book 
               {/* {therapist.firstName} */}
             </Link>
+          </div>
+          <div className="absolute bottom-3 right-3 z-10">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-6 text-white/90"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
           </div>
         </div>
       </article>
@@ -604,7 +618,7 @@ function TherapistCard({
                             </span>
                           </div>
                         </div>
-                        <div className="flex flex-col items-center gap-1.5">
+                        {/* <div className="flex flex-col items-center gap-1.5">
                           <div className="mt-3 flex flex-col gap-1.5 text-2xl font-medium text-app-ink">
                             <div className="flex flex-col">
                               <span aria-hidden="true" className="">
@@ -624,7 +638,7 @@ function TherapistCard({
                               </span>
                             </div>
                           </div>
-                        </div>
+                        </div> */}
                       </div>
 
                       <span className="therapist-profile-card-face therapist-profile-card-back">
