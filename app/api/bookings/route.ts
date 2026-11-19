@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { sendBookingAlert } from "@/lib/arkesel";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -170,6 +171,17 @@ export async function POST(request: Request) {
       console.error("Supabase booking insert failed:", error.message);
       return unavailableResponse();
     }
+
+    after(async () => {
+      try {
+        await sendBookingAlert(booking);
+      } catch (error) {
+        console.error(
+          "Arkesel booking notification failed:",
+          error instanceof Error ? error.message : "Unknown error",
+        );
+      }
+    });
 
     return NextResponse.json(
       { bookingId: id, confirmationToken },
