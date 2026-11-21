@@ -282,11 +282,14 @@ function CategorySection({
         body: JSON.stringify({ phoneNumber: whatsAppNumber }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not save your number.");
+      if (!response.ok)
+        throw new Error(result.error || "Could not save your number.");
       setNotifyStatus("Thanks! We’ll let you know when new therapists join.");
       setWhatsAppNumber("");
     } catch (error) {
-      setNotifyStatus(error instanceof Error ? error.message : "Could not save your number.");
+      setNotifyStatus(
+        error instanceof Error ? error.message : "Could not save your number.",
+      );
     } finally {
       setIsSavingNumber(false);
     }
@@ -305,7 +308,17 @@ function CategorySection({
             className="app-icon-button disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={`Previous ${title}`}
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
           </button>
           <button
             onClick={() => scrollToIndex(clampIndex(currentIndex + 1))}
@@ -313,7 +326,17 @@ function CategorySection({
             className="app-icon-button disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={`Next ${title}`}
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
           </button>
         </div>
       </div>
@@ -354,22 +377,71 @@ function CategorySection({
               />
             ))}
             {hasNotifyCard && (
-              <article data-therapist-card className="flex flex-[0_0_92%] flex-col snap-center overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm sm:min-w-68.75 sm:max-w-73.75 sm:flex-1">
+              <article
+                data-therapist-card
+                className="flex flex-[0_0_92%] flex-col snap-center overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm sm:min-w-68.75 sm:max-w-73.75 sm:flex-1"
+              >
                 <div className="flex h-[68vh] flex-col overflow-y-auto">
+                  <div className="p-0">
+                    <div className="relative min-h-28 flex-1">
+                      <Image
+                        src="/massage.jpeg"
+                        alt="A relaxing massage session"
+                        fill
+                        sizes="(max-width: 640px) 92vw, 300px"
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
                   <div className="p-5">
-                    <h4 className="text-2xl font-semibold tracking-tight mb-3">More therapists?</h4>
-                  <div className="relative min-h-24 flex-1">
-                    <Image src="/massage.jpeg" alt="A relaxing massage session" fill sizes="(max-width: 640px) 92vw, 300px" className="object-cover" />
+                    <h4 className="text-2xl font-semibold tracking-tight mb-3">
+                      More therapists?
+                    </h4>
+                    <p className="">
+                      Be the first to know when new therapists join. We&apos;re constantly expanding our network of professional massage therapists. New therapists are added every week.
+                    </p>
+                    {/* <p className="mt-3 text-sm leading-4 text-app-ink-muted">
+                      We&apos;re constantly expanding our network of
+                      professional massage therapists. New therapists are added
+                      every week.
+                    </p> */}
+
                   </div>
-                  <p className="text-2xl">Be the first to know when new therapists join.</p>
-                    <p className="mt-3 text-sm leading-4 text-app-ink-muted">We&apos;re constantly expanding our network of professional massage therapists. New therapists are added every week.</p>
-                  </div>
-                  <form onSubmit={submitNotifyRequest} className="space-y-3 p-5">
-                    <label htmlFor="whatsapp-notify-number" className="sr-only">Your WhatsApp number</label>
-                    <input id="whatsapp-notify-number" type="tel" autoComplete="tel" required value={whatsAppNumber} onChange={(event) => setWhatsAppNumber(event.target.value)} placeholder="Your WhatsApp number" className="app-control w-full placeholder:pl-1 text-" />
-                    <button type="submit" disabled={isSavingNumber} className="app-button app-button-primary w-full disabled:opacity-60">{isSavingNumber ? "Saving…" : "Notify me"}</button>
-                    {notifyStatus && <p role="status" className="text-sm text-app-ink-muted">{notifyStatus}</p>}
-                     <p className="mt-0 text-center text-xs text-app-ink-muted">We'll only contact you about new therapists and availability. You can opt out anytime.</p>
+                  <form
+                    onSubmit={submitNotifyRequest}
+                    className="space-y-3 p-5"
+                  >
+                    <label htmlFor="whatsapp-notify-number" className="sr-only">
+                      Your WhatsApp number
+                    </label>
+                    <input
+                      id="whatsapp-notify-number"
+                      type="tel"
+                      autoComplete="tel"
+                      required
+                      value={whatsAppNumber}
+                      onChange={(event) =>
+                        setWhatsAppNumber(event.target.value)
+                      }
+                      placeholder="Your WhatsApp number"
+                      className="app-control w-full placeholder:pl-1 text-"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSavingNumber}
+                      className="app-button app-button-primary w-full disabled:opacity-60"
+                    >
+                      {isSavingNumber ? "Saving…" : "Notify me"}
+                    </button>
+                    {notifyStatus && (
+                      <p role="status" className="text-sm text-center text-app-ink-muted">
+                        {notifyStatus}
+                      </p>
+                    )}
+                    <p className="mt-0 text-center text-xs text-app-ink-muted">
+                      We'll only contact you about new therapists and
+                      availability. You can opt out anytime.
+                    </p>
                   </form>
                 </div>
               </article>
@@ -394,7 +466,8 @@ function TherapistCard({
       : [therapist.image];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isVerificationCardFlipped, setIsVerificationCardFlipped] = useState(false);
+  const [isVerificationCardFlipped, setIsVerificationCardFlipped] =
+    useState(false);
   const [visibleReviewCount, setVisibleReviewCount] = useState(3);
   const modalTriggerRef = useRef<HTMLButtonElement | null>(null);
   const reviews = therapist.reviews ?? [];
@@ -554,7 +627,7 @@ function TherapistCard({
                 <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
                 <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17M8 14h3m-1.5-1.5v3" />
               </svg>
-              Book 
+              Book
               {/* {therapist.firstName} */}
             </Link>
           </div>
@@ -703,7 +776,6 @@ function TherapistCard({
                             <span className="text-lg font-semibold">
                               {therapist.firstName}
                             </span>
-
                           </div>
                           {therapist.isVerified ? (
                             <>
@@ -712,10 +784,10 @@ function TherapistCard({
                                 {formatVerifiedDate(therapist.verifiedAt)}
                               </span>
                               <span className="mt-2 text-xs text-start leading-4 text-white/90">
-                                Trust is central to what we do at Appi, and identity
-                                verification helps build it. We check a person’s
-                                details against a government-issued ID to make
-                                sure they are who they claim to be.
+                                Trust is central to what we do at Appi, and
+                                identity verification helps build it. We check a
+                                person’s details against a government-issued ID
+                                to make sure they are who they claim to be.
                               </span>
                             </>
                           ) : (
@@ -822,35 +894,37 @@ function TherapistCard({
                   {reviews.length ? (
                     <>
                       <div className="mt-3 space-y-2">
-                        {reviews.slice(0, visibleReviewCount).map((review, index) => (
-                          <article
-                            key={`${therapist.slug}-review-${index}`}
-                            className="rounded-lg bg-app-surface-muted p-3"
-                          >
-                            <div className="flex items-center justify-between gap-3 text-sm">
-                              <h4 className="font-semibold text-app-ink">
-                                {review.author}
-                              </h4>
-                              <span
-                                aria-label={`${review.rating} out of 5 stars`}
-                                className="shrink-0 text-amber-600"
-                              >
-                                ★ {review.rating}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm leading-5 text-app-ink-muted">
-                              {review.text}
-                            </p>
-                            {review.date ? (
-                              <time
-                                dateTime={review.date}
-                                className="mt-2 block text-xs text-app-ink-muted"
-                              >
-                                {formatVerifiedDate(review.date)}
-                              </time>
-                            ) : null}
-                          </article>
-                        ))}
+                        {reviews
+                          .slice(0, visibleReviewCount)
+                          .map((review, index) => (
+                            <article
+                              key={`${therapist.slug}-review-${index}`}
+                              className="rounded-lg bg-app-surface-muted p-3"
+                            >
+                              <div className="flex items-center justify-between gap-3 text-sm">
+                                <h4 className="font-semibold text-app-ink">
+                                  {review.author}
+                                </h4>
+                                <span
+                                  aria-label={`${review.rating} out of 5 stars`}
+                                  className="shrink-0 text-amber-600"
+                                >
+                                  ★ {review.rating}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm leading-5 text-app-ink-muted">
+                                {review.text}
+                              </p>
+                              {review.date ? (
+                                <time
+                                  dateTime={review.date}
+                                  className="mt-2 block text-xs text-app-ink-muted"
+                                >
+                                  {formatVerifiedDate(review.date)}
+                                </time>
+                              ) : null}
+                            </article>
+                          ))}
                       </div>
                       {visibleReviewCount < reviews.length ? (
                         <button

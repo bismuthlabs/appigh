@@ -61,7 +61,7 @@ export default function Home() {
         </div>
       </div>
       
-       <div className="mx-auto w-full max-w-6xl px-2 pt-4 pb-8 sm:px-8 sm:py-10">
+       {/* <div className="mx-auto w-full max-w-6xl px-2 pt-4 pb-8 sm:px-8 sm:py-10">
         <div className="p-2 sm:p-4 md:p-6 lg:p-8">
           <div className="flex flex-col items-start pb-6 gap-2 p-4 flex-[0_0_92%] snap-center overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm sm:min-w-68.75 sm:max-w-73.75 sm:flex-1">
             <p className="text-sm">You may book via WhatsApp instead</p>
@@ -83,18 +83,10 @@ export default function Home() {
                 </svg>
                 Chat on WhatsApp
               </Link>
-              {/* <p className="text-xl">Or call</p>
-              <Link
-                href="tel:0551584980"
-                className="rounded bg-none px-4 py-2 font-bold text-app-primary hover:text-app-primary/80"
-              >
-                +233 55 158 4980
-              </Link> */}
-
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
     </main>
   );
 }
