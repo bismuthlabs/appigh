@@ -6,7 +6,6 @@ import Link from "next/link";
 import type {
   Therapist,
   MassageOffering,
-  TherapistAvailability,
   ServiceLocation,
   WalkInLocation,
 } from "./therapists";
@@ -14,8 +13,6 @@ import Image from "next/image";
 import { readSavedBooking, saveBooking, type SavedBooking } from "../booking-data";
 import { formatGhs } from "../money";
 import {
-  getProviderAvailability,
-  getProviderTimeSlots,
   readProviderSettings,
   subscribeToProviderSettings,
   type ProviderSettings,
@@ -28,7 +25,6 @@ type Props = {
 };
 
 const emptyOfferings: MassageOffering[] = [];
-const emptyAvailability: TherapistAvailability[] = [];
 const emptyServiceLocations: ServiceLocation[] = [];
 const emptyWalkInLocations: WalkInLocation[] = [];
 const CONTACT_NUMBER_STORAGE_KEY = "appi.contact-number.v1";
@@ -39,47 +35,6 @@ function isValidPhoneNumber(value: string) {
 
   const digitCount = trimmedValue.replace(/\D/g, "").length;
   return digitCount >= 7 && digitCount <= 15;
-}
-
-function pad(n: number) {
-  return n.toString().padStart(2, "0");
-}
-
-function timeToMinutes(t: string) {
-  const [hh, mm] = t.split(":").map(Number);
-  return hh * 60 + mm;
-}
-
-function minutesToTime(mins: number) {
-  const hh = Math.floor(mins / 60);
-  const mm = mins % 60;
-  return `${pad(hh)}:${pad(mm)}`;
-}
-
-function formatBookingDate(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GH", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(year, month - 1, day));
-}
-
-function formatBookingTime(time: string) {
-  const [hour, minute] = time.split(":").map(Number);
-  const suffix = hour < 12 ? "AM" : "PM";
-  return `${hour % 12 || 12}:${pad(minute)} ${suffix}`;
-}
-
-function generateTimeSlots(start: string, end: string, duration: number) {
-  const startMin = timeToMinutes(start);
-  const endMin = timeToMinutes(end);
-  const slots: string[] = [];
-  for (let t = startMin; t + duration <= endMin; t += 15) {
-    // 15 minute step for flexibility
-    slots.push(minutesToTime(t));
-  }
-  return slots;
 }
 
 export default function BookingClient({
@@ -149,6 +104,8 @@ export default function BookingClient({
   const [selectedWalkInLocationId, setSelectedWalkInLocationId] = useState("");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const today = new Date();
+  const minimumBookingDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const [clientName, setClientName] = useState("");
   const [clientNotes, setClientNotes] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -161,10 +118,6 @@ export default function BookingClient({
     null,
   );
 
-  const availability = useMemo(() => {
-    if (providerSettings) return getProviderAvailability(providerSettings);
-    return therapist?.availability ?? emptyAvailability;
-  }, [providerSettings, therapist]);
   const effectiveSelectedOffering = useMemo(() => {
     if (!selectedOffering || !providerSettings) return selectedOffering;
     return {
@@ -241,7 +194,7 @@ export default function BookingClient({
       } catch {
         setProviderSettings(null);
         setProviderSettingsError(
-          "Provider availability settings couldn’t be read. The public page is showing its standard sample times.",
+          "Provider booking settings couldn’t be read. Displayed pricing may be out of date.",
         );
       }
     }
@@ -253,51 +206,6 @@ export default function BookingClient({
       unsubscribe();
     };
   }, [therapist]);
-
-  const availableDates = useMemo(
-    () => availability.map((a) => a.date),
-    [availability],
-  );
-
-  const timeSlots = useMemo(() => {
-    if (!selectedDate || !effectiveSelectedOffering) return [];
-    if (providerSettings) {
-      return getProviderTimeSlots(selectedDate, providerSettings);
-    }
-    const day = availability.find((a) => a.date === selectedDate) as
-      | TherapistAvailability
-      | undefined;
-    if (!day) return [];
-    return generateTimeSlots(
-      day.startTime,
-      day.endTime,
-      effectiveSelectedOffering.durationMinutes,
-    );
-  }, [
-    selectedDate,
-    effectiveSelectedOffering,
-    providerSettings,
-    availability,
-  ]);
-
-  const nextAvailableDate = useMemo(() => {
-    if (!selectedDate || !effectiveSelectedOffering) return null;
-
-    return [...availability]
-      .filter((day) => day.date > selectedDate)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .find(
-        (day) =>
-          (providerSettings
-            ? getProviderTimeSlots(day.date, providerSettings)
-            : generateTimeSlots(
-                day.startTime,
-                day.endTime,
-                effectiveSelectedOffering.durationMinutes,
-              )
-          ).length > 0,
-      )?.date ?? null;
-  }, [availability, selectedDate, effectiveSelectedOffering, providerSettings]);
 
   const selectedWalkInLocation = walkInLocations.find(
     (location) => location.id === selectedWalkInLocationId,
@@ -822,81 +730,31 @@ export default function BookingClient({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
                   <label htmlFor="booking-date" className="mb-2 block text-sm font-medium text-app-ink">Date</label>
-                  <div className="app-select-wrap">
-                    <select
+                  <input
                       id="booking-date"
+                      type="date"
+                      min={minimumBookingDate}
                       value={selectedDate || ""}
                       onChange={(e) => {
                         setSelectedDate(e.target.value);
                         setSelectedTime(null);
                       }}
-                      className="app-control app-control-select text-sm focus:outline-none focus:ring-2 focus:ring-app-focus"
-                    >
-                      <option value="">Choose a date</option>
-                      {selectedDate && !availableDates.includes(selectedDate) ? (
-                        <option value={selectedDate}>
-                          {formatBookingDate(selectedDate)} (previous booking)
-                        </option>
-                      ) : null}
-                      {availableDates.map((date) => (
-                        <option key={date} value={date}>
-                          {formatBookingDate(date)}
-                        </option>
-                      ))}
-                    </select>
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="app-select-chevron"><path d="m6 9 6 6 6-6" /></svg>
-                  </div>
+                      className="app-control w-full text-sm focus:outline-none focus:ring-2 focus:ring-app-focus"
+                    />
                 </div>
 
                 <div className="min-w-0">
                   <label htmlFor="booking-time" className="mb-2 block text-sm font-medium text-app-ink">Start time</label>
-                  <div className="app-select-wrap">
-                    <select
+                  <input
                       id="booking-time"
+                      type="time"
                       value={selectedTime || ""}
                       onChange={(e) => setSelectedTime(e.target.value)}
-                      disabled={!selectedDate || timeSlots.length === 0}
-                      className="app-control app-control-select text-sm focus:outline-none focus:ring-2 focus:ring-app-focus disabled:cursor-not-allowed disabled:opacity-55"
-                    >
-                      <option value="">Choose a time</option>
-                      {selectedTime && !timeSlots.includes(selectedTime) ? (
-                        <option value={selectedTime}>
-                          {formatBookingTime(selectedTime)} (previous booking)
-                        </option>
-                      ) : null}
-                      {timeSlots.map((time) => (
-                        <option key={time} value={time}>
-                          {formatBookingTime(time)}
-                        </option>
-                      ))}
-                    </select>
-                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="app-select-chevron"><path d="m6 9 6 6 6-6" /></svg>
-                  </div>
+                      disabled={!selectedDate}
+                      className="app-control w-full text-sm focus:outline-none focus:ring-2 focus:ring-app-focus disabled:cursor-not-allowed disabled:opacity-55"
+                    />
                 </div>
               </div>
-              {selectedDate && timeSlots.length === 0 && (
-                <div className="mt-3">
-                  <p className="text-sm text-app-ink-muted">
-                    No start times are available for this date and treatment.
-                  </p>
-                  {nextAvailableDate ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedDate(nextAvailableDate);
-                        setSelectedTime(null);
-                      }}
-                      className="app-button app-button-secondary mt-3"
-                    >
-                      Jump to next available date ({formatBookingDate(nextAvailableDate)})
-                    </button>
-                  ) : (
-                    <p className="mt-2 text-sm text-app-ink-muted">
-                      No later dates with available start times are currently listed.
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -1118,11 +976,7 @@ export default function BookingClient({
                 <p className="mb-1 text-xs uppercase tracking-[0.2em] text-app-ink-muted">
                   Next available
                 </p>
-                {availability[0] ? (
-                  <p>{formatBookingDate(availability[0].date)} • {formatBookingTime(availability[0].startTime)}–{formatBookingTime(availability[0].endTime)}</p>
-                ) : (
-                  <p>No availability published yet.</p>
-                )}
+                <p>Choose the date and start time that work best for you.</p>
               </div> */}
             </div>
 

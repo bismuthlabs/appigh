@@ -82,6 +82,10 @@ function CategorySection({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [whatsAppNumber, setWhatsAppNumber] = useState("");
+  const [notifyStatus, setNotifyStatus] = useState("");
+  const [isSavingNumber, setIsSavingNumber] = useState(false);
+  const hasNotifyCard = categoryKey === "available";
   const hasRestoredPositionRef = useRef(false);
 
   const filtersForCategory = useMemo(() => {
@@ -154,6 +158,7 @@ function CategorySection({
     }
     return items;
   }, [items, activeFilter, categoryKey]);
+  const cardCount = displayedItems.length + (hasNotifyCard ? 1 : 0);
 
   // Load persisted currentIndex/position for this category (or reset)
   useEffect(() => {
@@ -179,7 +184,7 @@ function CategorySection({
 
       const index = Math.min(
         Math.max(savedIndex, 0),
-        Math.max(displayedItems.length - 1, 0),
+        Math.max(cardCount - 1, 0),
       );
       const cardWidth = cards[0].offsetWidth;
       const cardLeft = index * (cardWidth + 12);
@@ -197,14 +202,14 @@ function CategorySection({
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [displayedItems.length, positionKey]);
+  }, [cardCount, positionKey]);
 
   const clampIndex = (nextIndex: number) =>
-    Math.min(Math.max(nextIndex, 0), Math.max(displayedItems.length - 1, 0));
+    Math.min(Math.max(nextIndex, 0), Math.max(cardCount - 1, 0));
 
   const scrollToIndex = (nextIndex: number) => {
     const container = scrollRef.current;
-    if (!container || displayedItems.length === 0) return;
+    if (!container || cardCount === 0) return;
 
     const cards = container.querySelectorAll<HTMLElement>(
       "[data-therapist-card]",
@@ -241,7 +246,7 @@ function CategorySection({
 
   const handleScroll = () => {
     const container = scrollRef.current;
-    if (!container || items.length === 0) return;
+    if (!container || cardCount === 0) return;
 
     const cards = container.querySelectorAll<HTMLElement>(
       "[data-therapist-card]",
@@ -262,9 +267,30 @@ function CategorySection({
     }
   };
 
-  const maxIndex = Math.max(displayedItems.length - 1, 0);
-  const canGoPrev = currentIndex > 0 && displayedItems.length > 0;
-  const canGoNext = currentIndex < maxIndex && displayedItems.length > 0;
+  const maxIndex = Math.max(cardCount - 1, 0);
+  const canGoPrev = currentIndex > 0 && cardCount > 0;
+  const canGoNext = currentIndex < maxIndex && cardCount > 0;
+
+  async function submitNotifyRequest(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSavingNumber(true);
+    setNotifyStatus("");
+    try {
+      const response = await fetch("/api/therapist-notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: whatsAppNumber }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not save your number.");
+      setNotifyStatus("Thanks! We’ll let you know when new therapists join.");
+      setWhatsAppNumber("");
+    } catch (error) {
+      setNotifyStatus(error instanceof Error ? error.message : "Could not save your number.");
+    } finally {
+      setIsSavingNumber(false);
+    }
+  }
 
   return (
     <section className="p-2 sm:p-4 md:p-6 lg:p-8">
@@ -312,7 +338,7 @@ function CategorySection({
         </div> */}
 
       <div className="overflow-hidden">
-        {displayedItems.length === 0 ? (
+        {displayedItems.length === 0 && !hasNotifyCard ? (
           <p className="text-sm text-zinc-500">No therapists found.</p>
         ) : (
           <div
@@ -327,6 +353,27 @@ function CategorySection({
                 categoryKey={categoryKey}
               />
             ))}
+            {hasNotifyCard && (
+              <article data-therapist-card className="flex flex-[0_0_92%] flex-col snap-center overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm sm:min-w-68.75 sm:max-w-73.75 sm:flex-1">
+                <div className="flex h-[68vh] flex-col overflow-y-auto">
+                  <div className="p-5">
+                    <h4 className="text-2xl font-semibold tracking-tight mb-3">More therapists?</h4>
+                  <div className="relative min-h-24 flex-1">
+                    <Image src="/massage.jpeg" alt="A relaxing massage session" fill sizes="(max-width: 640px) 92vw, 300px" className="object-cover" />
+                  </div>
+                  <p className="text-2xl">Be the first to know when new therapists join.</p>
+                    <p className="mt-3 text-sm leading-4 text-app-ink-muted">We&apos;re constantly expanding our network of professional massage therapists. New therapists are added every week.</p>
+                  </div>
+                  <form onSubmit={submitNotifyRequest} className="space-y-3 p-5">
+                    <label htmlFor="whatsapp-notify-number" className="sr-only">Your WhatsApp number</label>
+                    <input id="whatsapp-notify-number" type="tel" autoComplete="tel" required value={whatsAppNumber} onChange={(event) => setWhatsAppNumber(event.target.value)} placeholder="Your WhatsApp number" className="app-control w-full placeholder:pl-1 text-" />
+                    <button type="submit" disabled={isSavingNumber} className="app-button app-button-primary w-full disabled:opacity-60">{isSavingNumber ? "Saving…" : "Notify me"}</button>
+                    {notifyStatus && <p role="status" className="text-sm text-app-ink-muted">{notifyStatus}</p>}
+                     <p className="mt-0 text-center text-xs text-app-ink-muted">We'll only contact you about new therapists and availability. You can opt out anytime.</p>
+                  </form>
+                </div>
+              </article>
+            )}
           </div>
         )}
       </div>

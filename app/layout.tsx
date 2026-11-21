@@ -30,14 +30,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
       <head>
-        <script async src="https://www.googletagmanager.com/gtag/js?id=GTM-KDHG5LH4" />
+        {/* <script async src="https://www.googletagmanager.com/gtag/js?id=GTM-KDHG5LH4" />
         <script>
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'GTM-KDHG5LH4');
 gtag('config', 'AW-18564324117');`}
-        </script>
+        </script> */}
       </head>
       <body className="flex min-h-full flex-col">
         <div className="flex flex-1 flex-col pb-[calc(6rem+env(safe-area-inset-bottom))]">
@@ -45,7 +45,7 @@ gtag('config', 'AW-18564324117');`}
           <SiteFooter />
         </div>
         <BottomNav />
-        <Analytics />
+        {/* <Analytics /> */}
       </body>
     </html>
   );

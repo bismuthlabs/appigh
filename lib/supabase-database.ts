@@ -23,6 +23,12 @@ export type BookingInsert = Omit<BookingRow, "status" | "created_at"> & {
   created_at?: string;
 };
 
+export type TherapistNotificationRow = {
+  id: string;
+  phone_number: string;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -30,6 +36,15 @@ export type Database = {
         Row: BookingRow;
         Insert: BookingInsert;
         Update: Partial<BookingInsert>;
+        Relationships: [];
+      };
+      therapist_notification_signups: {
+        Row: TherapistNotificationRow;
+        Insert: Omit<TherapistNotificationRow, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<TherapistNotificationRow>;
         Relationships: [];
       };
     };
