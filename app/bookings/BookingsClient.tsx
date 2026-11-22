@@ -203,7 +203,7 @@ export default function BookingsClient() {
           </div>
           <h2 className="mt-4 text-xl font-semibold">{filter === "all" ? "No saved bookings yet" : `No ${filter} bookings`}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-app-ink-muted">
-            {filter === "all" ? "When you review and confirm a massage selection, it will appear here on this device." : "Try another filter or browse therapists to plan a massage."}
+            {filter === "all" ? "When you book a massage, it will appear here." : "Browse therapists to book a massage."}
           </p>
           <Link href="/" className="app-button app-button-primary mt-5">
             Browse therapists
