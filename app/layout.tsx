@@ -45,7 +45,7 @@ gtag('config', 'AW-18564324117');`}
           <SiteFooter />
         </div>
         <BottomNav />
-        {/* <Analytics /> */}
+        <Analytics />
       </body>
     </html>
   );
