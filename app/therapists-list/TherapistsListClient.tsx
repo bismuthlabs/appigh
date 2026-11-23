@@ -8,6 +8,7 @@ import type { Therapist } from "./therapists";
 import { formatGhs } from "../money";
 import NotificationSignup from "@/components/NotificationSignup";
 import { trackEvent } from "@/lib/analytics";
+import TrackedLink from "@/components/TrackedLink";
 
 type Props = {
   therapists: Therapist[];
@@ -380,9 +381,10 @@ function CategorySection({
                       professional massage therapists. New therapists are added
                       every week.
                     </p> */}
-
                   </div>
-                  <div className="p-5"><NotificationSignup compact /></div>
+                  <div className="p-5">
+                    <NotificationSignup compact />
+                  </div>
                 </div>
               </article>
             )}
@@ -538,8 +540,11 @@ function TherapistCard({
             }}
             className="absolute inset-x-0 bottom-0 z-20 w-full p-4 pb-3 text-left"
           >
-            <div className="mb-1.5 text-[1.05rem] font-semibold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
-              {therapist.firstName}
+            <div className="text-[1.05rem] font-semibold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
+              {therapist.firstName},{" "}
+              <span className="font-normal text-xs">
+                {therapist.location}, GH
+              </span>
               {/* , {therapist.age} */}
             </div>
             <div className="text-[11px] leading-5 text-white/95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
@@ -550,7 +555,7 @@ function TherapistCard({
             </div>
           </button>
 
-          <div className="absolute top-3 right-3 z-30">
+          <div className="flex flex-col gap-3 absolute top-3 right-3 z-30">
             <Link
               href={`/therapists-list/${therapist.slug}/book`}
               className="app-button app-button-primary min-h-9 gap-2 rounded-md px-3.5 py-2 text-xs shadow-md"
@@ -571,6 +576,25 @@ function TherapistCard({
               Book
               {/* {therapist.firstName} */}
             </Link>
+            <TrackedLink
+              href="https://wa.me/233551584980"
+              target="_blank"
+              rel="noopener noreferrer"
+              eventName="whatsapp_click"
+              eventParameters={{ location: "homepage" }}
+              className="gap-2 app-button min-h-9 rounded-md px-3.5 py-2 text-xs shadow-md bg-green-500 font-bold text-white hover:bg-green-600"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-5 w-5"
+              >
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.296-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347Z" />
+                <path d="M12.004 2.003a9.93 9.93 0 0 0-8.494 15.073L2 22l5.049-1.488A9.93 9.93 0 1 0 12.004 2.003Zm0 17.873a7.9 7.9 0 0 1-4.027-1.101l-.289-.171-2.996.883.891-2.95-.188-.303A7.904 7.904 0 1 1 12.004 19.876Z" />
+              </svg>
+              Chat
+            </TrackedLink>
           </div>
           <div className="absolute bottom-3 right-3 z-10">
             <svg
@@ -976,6 +1000,43 @@ function formatVerifiedDate(value?: string) {
   }).format(new Date(year, month - 1, day));
 }
 
+export type LandingPageConfig = {
+  title: string;
+  description: string;
+  canonical: string;
+  heading: string;
+  intro: string;
+  heroImage: string;
+  heroAlt: string;
+  serviceLocation?: "home";
+  therapists: Therapist[];
+  benefits: string[];
+  steps: string[];
+  faqs: { question: string; answer: string }[];
+  servicesIntro: string;
+};
+
+export function FAQSection({ faqs }: { faqs: LandingPageConfig["faqs"] }) {
+  return (
+    <section className="mx-auto max-w-4xl px-5 py-16 sm:px-8">
+      {/* <p className="text-xs font-semibold uppercase tracking-[0.2em] text-app-primary">
+        FAQs
+      </p> */}
+      <h2 className="text-3xl font-semibold">Frequently asked questions</h2>
+      <div className="mt-6 divide-y divide-app-border border-y border-app-border">
+        {faqs.map((faq) => (
+          <details key={faq.question} className="py-5">
+            <summary className="cursor-pointer font-semibold">
+              {faq.question}
+            </summary>
+            <p className="mt-3 leading-7 text-app-ink-muted">{faq.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function CategoryDetails({
   therapist,
   categoryKey,
@@ -988,7 +1049,7 @@ function CategoryDetails({
       return (
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
-            <span>
+            {/* <span>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
@@ -1003,8 +1064,21 @@ function CategoryDetails({
                 <circle cx="12" cy="10" r="2.5" />
               </svg>
             </span>
-            <span>{therapist.location}, GH</span>
+            <span>{therapist.location}, GH</span> */}
           </div>
+          <p className="text-xs">I will come to you - Home / Hotel</p>
+          <p className="flex flex-wrap gap-1.5 text-xs">
+            {therapist.specialties.length > 0
+              ? therapist.specialties.map((specialty) => (
+                  <span
+                    key={`${therapist.slug}-profile-${specialty}`}
+                    className="rounded-full border border-app-border px-2 py-0.5 text-xs"
+                  >
+                    {specialty}
+                  </span>
+                ))
+              : ""}
+          </p>
         </div>
       );
     case "top":

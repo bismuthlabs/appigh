@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function SiteFooter() {
   return (
-    <footer className="mt-auto border-t border-app-border bg-app-surface text-app-ink-muted">
+    <footer className="mt-aut border-t border-app-border bg-app-surface text-app-ink-muted">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-5 py-7 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div>
           <Link href="/" className="app-link font-semibold tracking-tight">
@@ -19,9 +19,9 @@ export default function SiteFooter() {
           <Link href="/about" className="app-link">
             About
           </Link>
-          <Link href="/blog" className="app-link">Blog</Link>
-          <Link href="/massage-kumasi" className="app-link">Massage in Kumasi</Link>
-          <Link href="/home-massage-kumasi" className="app-link">Home massage</Link>
+          {/* <Link href="/blog" className="app-link">Blog</Link> */}
+          {/* <Link href="/massage-kumasi" className="app-link">Massage in Kumasi</Link> */}
+          {/* <Link href="/home-massage-kumasi" className="app-link">Home massage</Link> */}
           {/* <Link href="/bookings" className="app-link">Your bookings</Link> */}
           <Link href="/terms" className="app-link">
             Terms
