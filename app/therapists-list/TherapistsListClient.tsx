@@ -6,6 +6,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Therapist } from "./therapists";
 import { formatGhs } from "../money";
+import NotificationSignup from "@/components/NotificationSignup";
+import { trackEvent } from "@/lib/analytics";
 
 type Props = {
   therapists: Therapist[];
@@ -82,9 +84,6 @@ function CategorySection({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [whatsAppNumber, setWhatsAppNumber] = useState("");
-  const [notifyStatus, setNotifyStatus] = useState("");
-  const [isSavingNumber, setIsSavingNumber] = useState(false);
   const hasNotifyCard = categoryKey === "available";
   const hasRestoredPositionRef = useRef(false);
 
@@ -271,30 +270,6 @@ function CategorySection({
   const canGoPrev = currentIndex > 0 && cardCount > 0;
   const canGoNext = currentIndex < maxIndex && cardCount > 0;
 
-  async function submitNotifyRequest(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSavingNumber(true);
-    setNotifyStatus("");
-    try {
-      const response = await fetch("/api/therapist-notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: whatsAppNumber }),
-      });
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error || "Could not save your number.");
-      setNotifyStatus("Thanks! We’ll let you know when new therapists join.");
-      setWhatsAppNumber("");
-    } catch (error) {
-      setNotifyStatus(
-        error instanceof Error ? error.message : "Could not save your number.",
-      );
-    } finally {
-      setIsSavingNumber(false);
-    }
-  }
-
   return (
     <section className="p-2 sm:p-4 md:p-6 lg:p-8">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -398,7 +373,7 @@ function CategorySection({
                       More therapists?
                     </h4>
                     <p className="">
-                      Be the first to know when new therapists join. We&apos;re constantly expanding our network of professional massage therapists. New therapists are added every week.
+                      Be the first to know when new therapists join.
                     </p>
                     {/* <p className="mt-3 text-sm leading-4 text-app-ink-muted">
                       We&apos;re constantly expanding our network of
@@ -407,42 +382,7 @@ function CategorySection({
                     </p> */}
 
                   </div>
-                  <form
-                    onSubmit={submitNotifyRequest}
-                    className="space-y-3 p-5"
-                  >
-                    <label htmlFor="whatsapp-notify-number" className="sr-only">
-                      Your WhatsApp number
-                    </label>
-                    <input
-                      id="whatsapp-notify-number"
-                      type="tel"
-                      autoComplete="tel"
-                      required
-                      value={whatsAppNumber}
-                      onChange={(event) =>
-                        setWhatsAppNumber(event.target.value)
-                      }
-                      placeholder="Your WhatsApp number"
-                      className="app-control w-full placeholder:pl-1 text-"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSavingNumber}
-                      className="app-button app-button-primary w-full disabled:opacity-60"
-                    >
-                      {isSavingNumber ? "Saving…" : "Notify me"}
-                    </button>
-                    {notifyStatus && (
-                      <p role="status" className="text-sm text-center text-app-ink-muted">
-                        {notifyStatus}
-                      </p>
-                    )}
-                    <p className="mt-0 text-center text-xs text-app-ink-muted">
-                      We'll only contact you about new therapists and
-                      availability. You can opt out anytime.
-                    </p>
-                  </form>
+                  <div className="p-5"><NotificationSignup compact /></div>
                 </div>
               </article>
             )}
@@ -593,6 +533,7 @@ function TherapistCard({
               modalTriggerRef.current = event.currentTarget;
               setIsVerificationCardFlipped(false);
               setVisibleReviewCount(3);
+              trackEvent("therapist_view", { therapist_slug: therapist.slug });
               setIsModalOpen(true);
             }}
             className="absolute inset-x-0 bottom-0 z-20 w-full p-4 pb-3 text-left"

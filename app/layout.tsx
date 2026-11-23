@@ -5,6 +5,7 @@ import "./globals.css";
 import SiteFooter from "./SiteFooter";
 import BottomNav from "./BottomNav";
 import { cn } from "@/lib/utils";
+import { siteUrl } from "@/lib/site";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -19,6 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Appi",
   description: "Get the massage you need!",
 };

@@ -8,13 +8,21 @@ export default async function BookingPage({
   searchParams: Promise<{
     repeat?: string | string[];
     reschedule?: string | string[];
+    service?: string | string[];
+    location?: string | string[];
   }>;
 }) {
-  const { repeat, reschedule } = await searchParams;
+  const { repeat, reschedule, service, location } = await searchParams;
   const repeatBookingId = Array.isArray(repeat) ? repeat[0] : repeat;
   const rescheduleRequested = Array.isArray(reschedule)
     ? reschedule[0] === "true"
     : reschedule === "true";
+  const requestedService = Array.isArray(service) ? service[0] : service;
+  const requestedLocation = Array.isArray(location) ? location[0] : location;
+  const initialService = requestedService && requestedService.length <= 120 ? requestedService : undefined;
+  const initialLocation = ["home", "hotel", "walk-in"].includes(requestedLocation ?? "")
+    ? requestedLocation as "home" | "hotel" | "walk-in"
+    : undefined;
 
   return (
     <main className="app-page min-h-screen flex-1 font-sans">
@@ -45,6 +53,8 @@ export default async function BookingPage({
         <BookingClient
           repeatBookingId={repeatBookingId}
           rescheduleBookingId={rescheduleRequested ? repeatBookingId : undefined}
+          initialService={initialService}
+          initialLocation={initialLocation}
         />
       </div>
     </main>

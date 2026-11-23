@@ -3,6 +3,7 @@ import Link from "next/link";
 import TherapistsListClient from "./therapists-list/TherapistsListClient";
 import { therapists } from "./therapists-list/therapists";
 import ProviderDropdown from "./therapists-list/ProviderDropdown";
+import TrackedLink from "@/components/TrackedLink";
 
 export const metadata: Metadata = {
   title: "Appi | At your service!",
@@ -31,10 +32,12 @@ export default function Home() {
             <p className="text-2xl">Need help finding a therapist?</p>
             <p className="text-sm mt-1 text-app-ink-muted">Tell us what you're looking for and we'll help you find an available massage therapist.</p>
             <div className="flex flex-col items-center gap-2">
-              <Link
+              <TrackedLink
                 href="https://wa.me/233551584980"
                 target="_blank"
                 rel="noopener noreferrer"
+                eventName="whatsapp_click"
+                eventParameters={{ location: "homepage" }}
                 className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-3 font-bold text-white hover:bg-green-600"
               >
                 <svg
@@ -47,7 +50,7 @@ export default function Home() {
                   <path d="M12.004 2.003a9.93 9.93 0 0 0-8.494 15.073L2 22l5.049-1.488A9.93 9.93 0 1 0 12.004 2.003Zm0 17.873a7.9 7.9 0 0 1-4.027-1.101l-.289-.171-2.996.883.891-2.95-.188-.303A7.904 7.904 0 1 1 12.004 19.876Z" />
                 </svg>
                 Chat on WhatsApp
-              </Link>
+              </TrackedLink>
               {/* <p className="text-xl">Or call</p>
               <Link
                 href="tel:0551584980"
@@ -66,10 +69,12 @@ export default function Home() {
           <div className="flex flex-col items-start pb-6 gap-2 p-4 flex-[0_0_92%] snap-center overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm sm:min-w-68.75 sm:max-w-73.75 sm:flex-1">
             <p className="text-sm">You may book via WhatsApp instead</p>
             <div className="flex flex-col items-center gap-2">
-              <Link
+              <TrackedLink
                 href="https://wa.me/233551584980"
                 target="_blank"
                 rel="noopener noreferrer"
+                eventName="whatsapp_click"
+                eventParameters={{ location: "homepage" }}
                 className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-3 font-bold text-white hover:bg-green-600"
               >
                 <svg
@@ -82,7 +87,7 @@ export default function Home() {
                   <path d="M12.004 2.003a9.93 9.93 0 0 0-8.494 15.073L2 22l5.049-1.488A9.93 9.93 0 1 0 12.004 2.003Zm0 17.873a7.9 7.9 0 0 1-4.027-1.101l-.289-.171-2.996.883.891-2.95-.188-.303A7.904 7.904 0 1 1 12.004 19.876Z" />
                 </svg>
                 Chat on WhatsApp
-              </Link>
+              </TrackedLink>
             </div>
           </div>
         </div>

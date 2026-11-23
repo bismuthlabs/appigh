@@ -7,7 +7,7 @@ import { CalendarDays, Search, UserRound } from "lucide-react";
 const navigationItems = [
   { label: "Explore", href: "/", icon: Search },
   { label: "Bookings", href: "/bookings", icon: CalendarDays },
-  { label: "Account", href: "/account", icon: UserRound },
+  { label: "Chat", href: "https://wa.me/233551584980", icon: UserRound },
 ];
 
 function isActivePath(pathname: string, href: string) {

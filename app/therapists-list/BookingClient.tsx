@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type {
@@ -12,6 +12,7 @@ import type {
 import Image from "next/image";
 import { readSavedBooking, saveBooking, type SavedBooking } from "../booking-data";
 import { formatGhs } from "../money";
+import { trackEvent } from "@/lib/analytics";
 import {
   readProviderSettings,
   subscribeToProviderSettings,
@@ -22,6 +23,8 @@ type Props = {
   therapist?: Therapist;
   repeatBookingId?: string;
   rescheduleBookingId?: string;
+  initialService?: string;
+  initialLocation?: ServiceLocation;
 };
 
 const emptyOfferings: MassageOffering[] = [];
@@ -41,6 +44,8 @@ export default function BookingClient({
   therapist: therapistProp,
   repeatBookingId,
   rescheduleBookingId,
+  initialService,
+  initialLocation,
 }: Props) {
   // When used from `/[slug]/book`, read slug client-side and resolve therapist.
   const [therapist, setTherapist] = useState<Therapist | undefined>(
@@ -49,6 +54,7 @@ export default function BookingClient({
   const [isTherapistLoading, setIsTherapistLoading] = useState(
     () => !therapistProp,
   );
+  const bookingStartTrackedRef = useRef(false);
   const [providerSettings, setProviderSettings] =
     useState<ProviderSettings | null>(null);
   const [providerSettingsError, setProviderSettingsError] = useState("");
@@ -117,6 +123,27 @@ export default function BookingClient({
   const [modalOffering, setModalOffering] = useState<MassageOffering | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!therapist) return;
+    if (!bookingStartTrackedRef.current) {
+      bookingStartTrackedRef.current = true;
+      trackEvent("booking_started", { therapist_slug: therapist.slug });
+    }
+  }, [therapist]);
+
+  useEffect(() => {
+    if (!therapist) return;
+    if (initialService) {
+      const matchingOffering = offerings.find(
+        (offering) => offering.massageType.toLowerCase() === initialService.toLowerCase(),
+      );
+      if (matchingOffering) setSelectedOffering(matchingOffering);
+    }
+    if (initialLocation && serviceLocations.includes(initialLocation)) {
+      setSelectedLocation(initialLocation);
+    }
+  }, [initialService, initialLocation, offerings, serviceLocations, therapist]);
 
   const effectiveSelectedOffering = useMemo(() => {
     if (!selectedOffering || !providerSettings) return selectedOffering;

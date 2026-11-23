@@ -19,6 +19,9 @@ export default function SiteFooter() {
           <Link href="/about" className="app-link">
             About
           </Link>
+          <Link href="/blog" className="app-link">Blog</Link>
+          <Link href="/massage-kumasi" className="app-link">Massage in Kumasi</Link>
+          <Link href="/home-massage-kumasi" className="app-link">Home massage</Link>
           {/* <Link href="/bookings" className="app-link">Your bookings</Link> */}
           <Link href="/terms" className="app-link">
             Terms

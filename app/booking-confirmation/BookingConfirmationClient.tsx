@@ -1,18 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Check } from "lucide-react";
 import { isSavedBooking, type SavedBooking } from "../booking-data";
 import { formatGhs } from "../money";
+import { trackEvent } from "@/lib/analytics";
 
 declare global {
   interface Window {
-    gtag?: (
-      command: string,
-      eventName: string,
-      parameters: { send_to: string },
-    ) => void;
+    gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void;
   }
 }
 
@@ -35,6 +32,7 @@ export default function BookingConfirmationClient({ bookingId }: { bookingId?: s
   const [booking, setBooking] = useState<SavedBooking | null | undefined>(undefined);
   const [loadError, setLoadError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
+  const completedTrackedRef = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -104,16 +102,20 @@ export default function BookingConfirmationClient({ bookingId }: { bookingId?: s
 
           const conversionKey = `appi.google-ads-conversion.${result.booking.id}`;
           try {
-            if (!window.sessionStorage.getItem(conversionKey)) {
+            if (!window.sessionStorage.getItem(conversionKey) && !completedTrackedRef.current) {
+              completedTrackedRef.current = true;
               window.gtag?.("event", "conversion", {
                 send_to: "AW-18564324117/YGTlCIiym7sdEJW2lJRF",
               });
+              trackEvent("booking_completed", { booking_id: result.booking.id });
               window.sessionStorage.setItem(conversionKey, "sent");
             }
           } catch {
-            window.gtag?.("event", "conversion", {
-              send_to: "AW-18564324117/YGTlCIiym7sdEJW2lJRF",
-            });
+            if (!completedTrackedRef.current) {
+              completedTrackedRef.current = true;
+              window.gtag?.("event", "conversion", { send_to: "AW-18564324117/YGTlCIiym7sdEJW2lJRF" });
+              trackEvent("booking_completed", { booking_id: result.booking.id });
+            }
           }
 
           setBooking(result.booking);

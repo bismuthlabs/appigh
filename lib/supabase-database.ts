@@ -26,6 +26,9 @@ export type BookingInsert = Omit<BookingRow, "status" | "created_at"> & {
 export type TherapistNotificationRow = {
   id: string;
   phone_number: string;
+  marketing_consent_at: string | null;
+  unsubscribe_token_hash: string | null;
+  unsubscribed_at: string | null;
   created_at: string;
 };
 
